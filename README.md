@@ -1,4 +1,4 @@
-![MachineVision](https://github.com/wEbCoAdEr/MachineVision/blob/main/logo.png)
+![MachineVision](https://github.com/wEbCoAdEr/MachineVision/blob/main/cover.png)
 
 # Machine Vision
 
