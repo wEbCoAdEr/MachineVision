@@ -1,0 +1,306 @@
+<!--
+
+MIT License
+
+Copyright (c) 2023 Rohsin Al Razi
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Machine Vision</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-md bg-dark navbar-dark">
+        <a class="navbar-brand" href="#">
+            <img src="logo.png" style="max-width: 120px">
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#collapsibleNavbar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="collapsibleNavbar">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="https://github.com/wEbCoAdEr/MachineVision">Github Repository</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <div class="row" style="margin-top: 20px">
+
+            <div style="margin-bottom: 20px" class="col-md-8 offset-md-2">
+                <div class="card scanResultCard" style="display: none">
+                    <div class="card-header bg-dark text-white"><b>SCAN RESULT</b></div>
+                    <div class="card-body" style="padding: 0">
+                        <table class="table table-bordered table-striped table-hover" style="margin-bottom: 0">
+                            <thead>
+                                <tr>
+                                    <th>OBJECT</th>
+                                    <th>TOTAL COUNT</th>
+                                </tr>
+                            </thead>
+                            <tbody class="scanResultTableBody">
+
+                            </tbody>
+                        </table>
+                        <canvas id="output_image_canvas" style="background-repeat: no-repeat;
+                        background-size: cover; max-width: 100%;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px" class="col-md-8 offset-md-2">
+                <div class="card">
+                    <div class="card-header bg-dark text-white"><b>SELECT IMAGE</b></div>
+                    <div class="card-body">
+                        <p class="lead">Select a PNG or JPEG image, having maximum size <span id="max-size"></span> KB.</p>
+                        <form id="upload-image-form" action="" method="post" enctype="multipart/form-data">
+                            <div class="alert alert-info" id="loading" style="display: none;" role="alert">
+                                Uploading image...
+                                <div class="progress">
+                                    <div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100" style="width: 100%">
+                                    </div>
+                                </div>
+                            </div>
+                            <br>
+                            <div id="image-preview-div" style="display: none">
+                                <label for=""><b>SELECTED IMAGE</b></label>
+                                <br>
+                                <img id="preview-img" class="img-fluid" style="width: 100%" src="noimage">
+                            </div>
+                            <div class="form-group">
+                                <input type="file" name="image" id="file" required>
+                            </div>
+                            <div class="form-group">
+                                <button class="btn btn-primary form-control" id="upload-button" type="submit" disabled>SCAN
+                                    IMAGE
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+    <script>
+
+        var c = document.getElementById("output_image_canvas");
+        var ctx = c.getContext("2d");
+
+        function noPreview() {
+            $('#image-preview-div').css("display", "none");
+            $('#preview-img').attr('src', 'noimage');
+            $('upload-button').attr('disabled', '');
+        }
+
+        function selectImage(e) {
+
+            $('#file').css("color", "black");
+            $('#image-preview-div').css("display", "block");
+            $('#preview-img').attr('src', e.target.result);
+            $('#preview-img').css('max-width', '550px');
+
+            var image = new Image();
+            image.src = e.target.result;
+
+            image.onload = function() {
+
+                //Get image height and width
+                var imgWidth = this.width;
+                var imgHeight = this.height;
+
+                //Set canvas height and width
+                ctx.canvas.width = imgWidth;
+                ctx.canvas.height = imgHeight;
+
+            };
+
+            //Set Canvas Background
+            $('#output_image_canvas').css("background-image", "url(" + e.target.result + ")");
+        }
+
+        //Random Color Generation Function
+        function getRandomColor() {
+            
+            let colorArr = ['#ef351a', '#2d8015', '#f5ac2a', '#1a00fa', '#000000'];
+            
+            return colorArr[Math.floor(Math.random() * colorArr.length)];
+        }
+
+        //Image object detection function
+        function detectObjectsOnImage(objectDetections, type='face') {
+
+            objectDetections.forEach(function(item) {
+
+                let coordinates = item.coordinates;
+                let title = '';
+
+                if(type === 'face'){
+                    title = item.face_name;
+                }else{
+                    title = item.object_title;
+                }
+
+                let x1 = coordinates.split(',')[0];
+                let x2 = coordinates.split(',')[1];
+                let y1 = coordinates.split(',')[2];
+                let y2 = coordinates.split(',')[3];
+
+
+                ctx.lineWidth = 4;
+                ctx.fillStyle = "#00ca00";
+                ctx.font = "30px Arial";
+                ctx.fillText(title, x1, (y1-10));
+
+                ctx.strokeStyle = getRandomColor();
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y1);
+                ctx.stroke();
+
+
+                ctx.beginPath();
+                ctx.moveTo(x2, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+
+
+                ctx.beginPath();
+                ctx.moveTo(x2, y2);
+                ctx.lineTo(x1, y2);
+                ctx.stroke();
+
+
+                ctx.beginPath();
+                ctx.moveTo(x1, y2);
+                ctx.lineTo(x1, y1);
+                ctx.stroke();
+
+            });
+        }
+
+        $(document).ready(function(e) {
+
+            var maxsize = 4096 * 1024; // 4096 KB
+
+            $('#max-size').html((maxsize / 1024).toFixed(2));
+
+            $('#upload-image-form').on('submit', function(e) {
+
+                e.preventDefault();
+
+                $('#message').empty();
+                $('#loading').show();
+
+                let scanResultTableBody = $('.scanResultTableBody');
+                let scanResultCard = $('.scanResultCard');
+
+                $.ajax({
+                    url: "https://api.chooch.ai/predict/image?apikey=f19a747a-d6a2-48f7-b692-6542d20a3d17",
+                    type: "POST",
+                    data: new FormData(this),
+                    contentType: false,
+                    cache: false,
+                    processData: false,
+                    success: function(data) {
+
+                        console.log(data);
+
+                        let objectsPredictions = data.objects.predictions;
+                        let objectPredictionsSummary = data.objects.summary;
+                        let faceDetections = data.faces.predictions;
+                        let objectDetections = data.objects.predictions;
+
+
+                        //Calls Image Face Detection Identifier Function
+                        detectObjectsOnImage(faceDetections);
+
+                        //Calls Image Object Detection Identifier Function
+                        detectObjectsOnImage(objectDetections, 'object');
+
+                        let rowMarkUp = '';
+
+                        objectPredictionsSummary.forEach(function(item) {
+
+                            let object_title = item.object_title;
+
+                            rowMarkUp += '<tr><td>' + object_title.toUpperCase() + '</td><td>' + item.count + '</td></tr>';
+
+                        });
+
+                        $('#loading').hide();
+
+                        scanResultTableBody.html(rowMarkUp);
+
+                        scanResultCard.show();
+
+                    }
+                });
+
+            });
+
+            $('#file').change(function() {
+
+                var file = this.files[0];
+                var match = ["image/jpeg", "image/png", "image/jpg"];
+
+                if (!((file.type == match[0]) || (file.type == match[1]) || (file.type == match[2]))) {
+                    noPreview();
+
+                    $('#message').html('<div class="alert alert-warning" role="alert">Unvalid image format. Allowed formats: JPG, JPEG, PNG.</div>');
+
+                    return false;
+                }
+
+                if (file.size > maxsize) {
+                    noPreview();
+
+                    $('#message').html('<div class=\"alert alert-danger\" role=\"alert\">The size of image you are attempting to upload is ' + (file.size / 1024).toFixed(2) + ' KB, maximum size allowed is ' + (maxsize / 1024).toFixed(2) + ' KB</div>');
+
+                    return false;
+                }
+
+                $('#upload-button').removeAttr("disabled");
+
+                var reader = new FileReader();
+                reader.onload = selectImage;
+                reader.readAsDataURL(this.files[0]);
+
+            });
+
+        });
+    </script>
+</body>
+
+</html>
